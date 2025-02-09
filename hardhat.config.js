@@ -8,7 +8,7 @@ module.exports = {
       url: "https://ethereum-rpc.publicnode.com",
     },
     "sepolia":{
-      "url": "https://rpc.sepolia.ethpandaops.io",
+      "url": "https://sepolia.drpc.org",
       "accounts": [""]
     }
   },
