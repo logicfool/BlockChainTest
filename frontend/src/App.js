@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
-import { ChakraProvider, Box, VStack, Heading, Input, Button, Text, useToast, Table, Thead, Tbody, Tr, Th, Td } from '@chakra-ui/react';
+import { ChakraProvider, Box, VStack, Heading, Input, Button, Text, Table, Thead, Tbody, Tr, Th, Td, createStandaloneToast } from '@chakra-ui/react';
 import './App.css';
 
 // ABI will need to be replaced with your actual contract ABI
@@ -18,7 +18,7 @@ function App() {
   const [books, setBooks] = useState([]);
   const [newBook, setNewBook] = useState({ name: '', author: '' });
   const [loading, setLoading] = useState(false);
-  const toast = useToast();
+  const { toast } = createStandaloneToast();
 
   useEffect(() => {
     const init = async () => {
@@ -28,8 +28,7 @@ function App() {
           const provider = new ethers.providers.Web3Provider(window.ethereum);
           setProvider(provider);
           
-          // Replace with your deployed contract address
-          const contractAddress = ''; // TODO: Add your contract address
+          const contractAddress = '0x418822613e648b76eaC3dd6970d566B908d2e9a4';
           const contract = new ethers.Contract(contractAddress, contractABI, provider.getSigner());
           setContract(contract);
           
