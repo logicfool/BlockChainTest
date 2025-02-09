@@ -9,7 +9,7 @@ module.exports = {
     },
     "sepolia":{
       "url": "https://sepolia.drpc.org",
-      "accounts": [""]
+      "accounts": [process.env.PRIVATE_KEY]
     }
   },
   // add accounts
