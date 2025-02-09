@@ -6,6 +6,11 @@ module.exports = {
   networks:{
     "ethereum":{
       url: "https://ethereum-rpc.publicnode.com",
+    },
+    "sepolia":{
+      "url": "https://rpc.sepolia.ethpandaops.io",
+      "accounts": [""]
     }
-  }
+  },
+  // add accounts
 };
