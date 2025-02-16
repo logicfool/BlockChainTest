@@ -1,6 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
-import { ChakraProvider, Box, VStack, Heading, Input, Button, Text, Table, Thead, Tbody, Tr, Th, Td, createStandaloneToast } from '@chakra-ui/react';
+import {
+  ChakraProvider,
+  Box,
+  VStack,
+  Heading,
+  Input,
+  Button,
+  Text,
+  Container,
+  useToast
+} from '@chakra-ui/react';
 import './App.css';
 
 // ABI will need to be replaced with your actual contract ABI
@@ -9,7 +19,9 @@ const contractABI = [
   "function removeBook(uint _id) public",
   "function getBook(uint _id) public view returns (tuple(uint id, string name, string author))",
   "function getTotalBooks() public view returns (uint)",
-  "function getEmptyIDS() public view returns (uint[] memory)"
+  "function getEmptyIDS() public view returns (uint[] memory)",
+  "function changeLibrarian(address _librarian) public onlyOwner",
+  "function librarian() public view returns (address)"
 ];
 
 function App() {
@@ -18,7 +30,11 @@ function App() {
   const [books, setBooks] = useState([]);
   const [newBook, setNewBook] = useState({ name: '', author: '' });
   const [loading, setLoading] = useState(false);
-  const { toast } = createStandaloneToast();
+  const toast = useToast();
+  const [librarian, setLibrarian] = useState(null);
+  const [address, setAddress] = useState(null);
+  const [newLibrarian, setNewLibrarian] = useState('');
+
 
   useEffect(() => {
     const init = async () => {
@@ -28,31 +44,42 @@ function App() {
           const provider = new ethers.providers.Web3Provider(window.ethereum);
           setProvider(provider);
           
-          const contractAddress = '0x418822613e648b76eaC3dd6970d566B908d2e9a4';
+          const contractAddress = '0x1bBD4f5BC056e2606292E85E2D5944E371C57377';
           const contract = new ethers.Contract(contractAddress, contractABI, provider.getSigner());
           setContract(contract);
-          
-          loadBooks();
+          const librarian = await contract.librarian();
+          setLibrarian(librarian);
+          const address = await provider.getSigner().getAddress();
+          setAddress(address);
         } catch (error) {
           console.error('Error initializing:', error);
         }
       } else {
         toast({
-          title: 'MetaMask not found',
+          title: 'Error',
           description: 'Please install MetaMask to use this application',
           status: 'error',
           duration: 5000,
+          isClosable: true,
         });
       }
     };
     init();
   }, []);
 
+  useEffect(() => {
+    console.log("Calling Load Books");
+    loadBooks();
+  },[contract])
+
   const loadBooks = async () => {
     if (!contract) return;
     try {
       setLoading(true);
-      const totalBooks = await contract.getTotalBooks();
+      let totalBooks = await contract.getTotalBooks();
+      console.log("Total Books : ",totalBooks);
+      const emptyIDS = await contract.getEmptyIDS();
+      totalBooks += emptyIDS.length;
       const loadedBooks = [];
       
       for (let i = 0; i < totalBooks; i++) {
@@ -74,13 +101,60 @@ function App() {
         description: 'Failed to load books',
         status: 'error',
         duration: 3000,
+        isClosable: true,
       });
     } finally {
       setLoading(false);
     }
   };
 
+  const changeLibrarian = async () => {
+    if (!ethers.utils.getAddress(address) == ethers.utils.getAddress(librarian)){
+      toast({
+        title: 'Error',
+        description: 'Only Librarian can add books',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      })
+    }
+    if (!contract || !newLibrarian) return;
+    try {
+      setLoading(true);
+      const tx = await contract.changeLibrarian(newLibrarian);
+      await tx.wait();
+      
+      toast({
+        title: 'Success',
+        description: 'Librarian changed successfully',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      })
+    } catch (error) {
+      console.error('Error changing librarian:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to change librarian',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      })
+    } finally {
+      setLoading(false);
+    }
+  }
+
   const addBook = async () => {
+    if (!ethers.utils.getAddress(address) == ethers.utils.getAddress(librarian)){
+      toast({
+        title: 'Error',
+        description: 'Only Librarian can add books',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      })
+    }
     if (!contract || !newBook.name || !newBook.author) return;
     try {
       setLoading(true);
@@ -92,6 +166,7 @@ function App() {
         description: 'Book added successfully',
         status: 'success',
         duration: 3000,
+        isClosable: true,
       });
       
       setNewBook({ name: '', author: '' });
@@ -103,6 +178,7 @@ function App() {
         description: 'Failed to add book',
         status: 'error',
         duration: 3000,
+        isClosable: true,
       });
     } finally {
       setLoading(false);
@@ -110,6 +186,15 @@ function App() {
   };
 
   const removeBook = async (id) => {
+    if (!ethers.utils.getAddress(address) == ethers.utils.getAddress(librarian)){
+      toast({
+        title: 'Error',
+        description: 'Only Librarian can add books',
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      })
+    }
     if (!contract) return;
     try {
       setLoading(true);
@@ -121,6 +206,7 @@ function App() {
         description: 'Book removed successfully',
         status: 'success',
         duration: 3000,
+        isClosable: true,
       });
       
       loadBooks();
@@ -131,6 +217,7 @@ function App() {
         description: 'Failed to remove book',
         status: 'error',
         duration: 3000,
+        isClosable: true,
       });
     } finally {
       setLoading(false);
@@ -139,7 +226,7 @@ function App() {
 
   return (
     <ChakraProvider>
-      <Box p={8}>
+      <Container maxW="container.md" py={8}>
         <VStack spacing={8} align="stretch">
           <Heading>Library Management System</Heading>
           
@@ -170,41 +257,54 @@ function App() {
           <Box>
             <Heading size="md" mb={4}>Book List</Heading>
             {books.length > 0 ? (
-              <Table variant="simple">
-                <Thead>
-                  <Tr>
-                    <Th>ID</Th>
-                    <Th>Name</Th>
-                    <Th>Author</Th>
-                    <Th>Action</Th>
-                  </Tr>
-                </Thead>
-                <Tbody>
-                  {books.map((book) => (
-                    <Tr key={book.id}>
-                      <Td>{book.id.toString()}</Td>
-                      <Td>{book.name}</Td>
-                      <Td>{book.author}</Td>
-                      <Td>
-                        <Button
-                          colorScheme="red"
-                          size="sm"
-                          onClick={() => removeBook(book.id)}
-                          isLoading={loading}
-                        >
-                          Remove
-                        </Button>
-                      </Td>
-                    </Tr>
-                  ))}
-                </Tbody>
-              </Table>
+              <VStack spacing={4} align="stretch">
+                {books.map((book) => (
+                  <Box key={book.id} p={4} borderWidth={1} borderRadius="md" display="flex" justifyContent="space-between" alignItems="center">
+                    <VStack align="start" spacing={1}>
+                      <Text><strong>ID:</strong> {book.id.toString()}</Text>
+                      <Text><strong>Name:</strong> {book.name}</Text>
+                      <Text><strong>Author:</strong> {book.author}</Text>
+                    </VStack>
+                    <Button
+                      colorScheme="red"
+                      size="sm"
+                      onClick={() => removeBook(book.id)}
+                      isLoading={loading}
+                    >
+                      Remove
+                    </Button>
+                  </Box>
+                ))}
+              </VStack>
             ) : (
               <Text>No books available</Text>
             )}
           </Box>
+
+          <Box>
+            <Text>The Librarian is: {librarian}</Text>
+            <Text>{address ? ethers.utils.getAddress(address) == ethers.utils.getAddress(librarian) ? "You are the librarian" : "You are not the librarian" : "Please connect your wallet"}</Text>
+            <VStack spacing={4}>
+            <Text>Change Librarian: </Text>
+
+            <Input
+              placeholder="Librarian Address"
+              value={newLibrarian}
+              onChange={(e) => setNewLibrarian(e.target.value)}
+            />
+
+            <Button
+              colorScheme="blue"
+              onClick={changeLibrarian}
+              isLoading={loading}
+              isDisabled={!newLibrarian}
+            >
+              Change Librarian
+            </Button>
+            </VStack>
+          </Box>
         </VStack>
-      </Box>
+      </Container>
     </ChakraProvider>
   );
 }

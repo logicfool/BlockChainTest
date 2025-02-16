@@ -10,8 +10,14 @@ contract Manager is Library{
         require(msg.sender == librarian, "You are not the librarian");
         _;
     }
+
+    event BookAdded(uint id, string name, string author);
     constructor() {
         librarian = msg.sender;
+    }
+
+    function changeLibrarian(address _librarian) public onlyLibrarian {
+        librarian = _librarian;
     }
 
     function addBook(string memory _name, string memory _author) public override{
@@ -29,12 +35,18 @@ contract Manager is Library{
         });
         _Library[id] = b;
         totalBooks++;
+        emit BookAdded(id, _name, _author);
     }
-
+    // keccak256("removeBook(uint)")
     function removeBook(uint _id) public override onlyLibrarian {
         delete _Library[_id];
         binnedIDS.push(_id);
         totalBooks--;
+    }
+    
+    // keccak256("removeBook(uint,bool)")
+    function removeBook(uint _id, bool toBin) public onlyLibrarian{
+
     }
 
     function getBook(uint _id) public view returns (Book memory) {
